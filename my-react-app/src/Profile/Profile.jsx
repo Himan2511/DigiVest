@@ -312,7 +312,7 @@ useEffect(() => {
 
 {uploadStatus && <p>{uploadStatus}</p>}
                 
-                {/* <h2>User Details</h2> */}
+                <h2>User Details</h2>
                 <ul className={styles.userInfo}>
                     <li>
                         <span className={styles.label}>Name:</span>
