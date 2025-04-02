@@ -4,6 +4,7 @@ import pfp from "../../../assests/propfp.jpg";
 import imagem from "../../../assests/product_image1.avif";
 import imagem2 from "../../../assests/product_image2.jpeg";
 import imagem3 from "../../../assests/product_image3.jpeg";
+import { Link } from "react-router-dom"; // Ensure React Router is imported
 
 export const Hero = ({ product, email }) => {
   const sliderImages = [imagem, imagem2, imagem3];
@@ -14,6 +15,7 @@ export const Hero = ({ product, email }) => {
         <div className={styles.leftside}>
           <img src={product[0].images} alt="Product" className={styles.heroImg} />
         </div>
+
         <div className={styles.content}>
          {console.log(product)}
 
@@ -25,15 +27,14 @@ export const Hero = ({ product, email }) => {
               <div className={styles.investor_type}>
                 <div className={styles.investor_list}>
                   {item?.tags?.map((tag, i) => (
-                    <button key={i} className={styles.tag}>
-                      {tag}
-                    </button>
+                    <Link key={i} to={`/products-by-tag/${tag}`} >
+                      <button className={styles.tag}>{tag}</button>
+                    </Link>
                   ))}
                 </div>
               </div>
             </div>
           ))}
-
           
         </div>
       </section>

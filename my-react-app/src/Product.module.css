@@ -152,3 +152,9 @@
     font-size: larger;
     margin: 30px;
 }
+
+.filterTagMessage{
+    margin-left: 150px;
+    margin-bottom: 20px;
+    color: white;
+}
