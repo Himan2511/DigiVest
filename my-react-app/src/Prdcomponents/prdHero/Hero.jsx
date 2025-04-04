@@ -1,34 +1,34 @@
 import React from "react";
 import styles from "./Hero.module.css";
-import pfp from "../../../assests/propfp.jpg";
-import imagem from "../../../assests/product_image1.avif";
-import imagem2 from "../../../assests/product_image2.jpeg";
-import imagem3 from "../../../assests/product_image3.jpeg";
-import { Link } from "react-router-dom"; // Ensure React Router is imported
+import { Link, useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 
-export const Hero = ({ product=[], email }) => {
+export const Hero = ({ product = [], email, loggedInEmail }) => {
+  const navigate = useNavigate(); // Initialize navigation function
+
   const sliderImages = product[0]?.images?.length > 0 ? product[0].images : [];
-  
-  {console.log(email)}
+
+  // Function to handle Buy Token button click
+  const handleBuyToken = () => {
+    navigate(`/buy-token/${email}`); // Navigate to BuyToken page with email as param
+  };
+
   return (
     <div className={styles.all}>
       <section className={styles.container}>
         <div className={styles.leftside}>
-          <img src={product[0].images} alt="Product" className={styles.heroImg} />
+          <img src={product[0]?.images} alt="Product" className={styles.heroImg} />
         </div>
 
         <div className={styles.content}>
-         {console.log(product)}
-
-         {product.map((item, index) => (
-            <div key={index}> {/* Wrap JSX inside .map() */}
+          {product.map((item, index) => (
+            <div key={index}>
               <h1 className={styles.title}>{item?.productName || "Product Name"}</h1>
               <p className={styles.description}>{item?.description || "Product description not available."}</p>
               <p className={styles.email}>Contact: {email}</p>
               <div className={styles.investor_type}>
                 <div className={styles.investor_list}>
                   {item?.tags?.map((tag, i) => (
-                    <Link key={i} to={`/products-by-tag/${tag}`} >
+                    <Link key={i} to={`/products-by-tag/${tag}`}>
                       <button className={styles.tag}>{tag}</button>
                     </Link>
                   ))}
@@ -36,7 +36,6 @@ export const Hero = ({ product=[], email }) => {
               </div>
             </div>
           ))}
-          
         </div>
       </section>
 
@@ -45,6 +44,16 @@ export const Hero = ({ product=[], email }) => {
           <img key={index} src={image} alt={`Slide ${index + 1}`} className={styles.sliderImage} />
         ))}
       </div>
+
+      {/* Show Buttons Only If Logged-In User Matches Product Owner */}
+      {loggedInEmail === email && (
+        <div className={styles.buttonContainer}>
+          <button className={styles.buyTokens} onClick={handleBuyToken}>
+            Buy Tokens
+          </button>
+          <button className={styles.gainEquity}>Gain Equity</button>
+        </div>
+      )}
     </div>
   );
 };

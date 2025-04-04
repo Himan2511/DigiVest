@@ -14,7 +14,7 @@ const AdminModel = require("./models/admin");
 const ProductModel = require("./models/Product");  // Import Product.js model
 const UnverifiedUser = require("./models/Unverified");  // Adjust path if needed
 const VirtualTokenModel = require("./models/VirtualToken");
-
+const UserTokenModel = require("./models/UserToken");  // Add this line
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -145,7 +145,6 @@ app.post('/admin/login', async (req, res) => {
 
 
 
-
 // ======================== COMMUNITY FORUM ======================== //
 
 
@@ -163,33 +162,40 @@ app.get("/posts", async (req, res) => {
 
 
 // Upvote a post
-
 app.get("/posts/:postid/:usermail", async (req, res) => {
-    try {
-        const { postid, usermail } = req.params;
+    const { postid, usermail } = req.params;
 
-        const user = await ProfileInfoModel.findOne({ email: usermail });
+    try {
+        // Find the user in ProfileInfoModel
+        let user = await ProfileInfoModel.findOne({ email: usermail });
 
         if (!user) {
-            return res.status(404).json({ status: "Error", message: `User not found ${usermail}` });
+            return res.status(404).json({ status: "Error", message: `User not found: ${usermail}` });
         }
 
+        // Ensure the likesposts field is initialized
+        if (!user.likesposts) {
+            user.likesposts = [];
+        }
+
+        // Check if the user has already liked the post
         const alreadyLiked = user.likesposts.some((post) => post.likecomp === postid);
         let count = 0;
 
         if (!alreadyLiked) {
-            // Add post to liked list
+            // Add the post to the user's likedposts
             user.likesposts.push({ likecomp: postid });
             await user.save();
 
-            const postinfo = await PostModel.findById(postid);
-            if (!postinfo) {
+            // Increment the upvote count in the PostModel
+            const post = await PostModel.findById(postid);
+            if (!post) {
                 return res.status(404).json({ status: "Error", message: "Post not found" });
             }
 
-            postinfo.upvotes += 1;
-            count = postinfo.upvotes;
-            await postinfo.save();
+            post.upvotes += 1;
+            count = post.upvotes;
+            await post.save();
 
             return res.status(200).json({ status: "Success", message: "Upvoted successfully", count });
         } else {
@@ -197,14 +203,15 @@ app.get("/posts/:postid/:usermail", async (req, res) => {
             user.likesposts = user.likesposts.filter((post) => post.likecomp !== postid);
             await user.save();
 
-            const postinfo = await PostModel.findById(postid);
-            if (!postinfo) {
+            // Decrement the upvote count in the PostModel
+            const post = await PostModel.findById(postid);
+            if (!post) {
                 return res.status(404).json({ status: "Error", message: "Post not found" });
             }
 
-            postinfo.upvotes -= 1;
-            count = postinfo.upvotes;
-            await postinfo.save();
+            post.upvotes -= 1;
+            count = post.upvotes;
+            await post.save();
 
             return res.status(200).json({ status: "Success", message: "Upvote removed", count });
         }
@@ -300,6 +307,114 @@ app.post("/create-post", upload.array("images"), async (req, res) => {
 
 
 
+
+// Fetch posts created by the logged-in user
+app.get("/myposts/:email", async (req, res) => {
+    const { email } = req.params;
+    try {
+        const posts = await PostModel.find({ email }).sort({ createdAt: -1 });
+        res.json({ status: "Success", posts });
+    } catch (error) {
+        console.error("Error fetching user posts:", error);
+        res.status(500).json({ error: "Error fetching user posts" });
+    }
+});
+
+// Fetch posts where the user has commented
+app.get("/mycomments/:email", async (req, res) => {
+    const { email } = req.params;
+    try {
+        // Fetch all posts where the user has commented
+        const posts = await PostModel.find({ "comments.email": email });
+
+        // Filter comments for each post to include only the user's comments
+        const postsWithUserComments = posts.map(post => {
+            const userComments = post.comments.filter(comment => comment.email === email);
+            return { ...post.toObject(), comments: userComments };
+        });
+
+        res.json({ status: "Success", posts: postsWithUserComments });
+    } catch (error) {
+        console.error("Error fetching commented posts:", error);
+        res.status(500).json({ error: "Error fetching commented posts" });
+    }
+});
+
+// Fetch posts upvoted by the user
+app.get("/myupvotes/:email", async (req, res) => {
+    const { email } = req.params;
+    try {
+        const profile = await ProfileInfoModel.findOne({ email });
+        if (!profile) return res.status(404).json({ error: "User profile not found" });
+
+        const postIds = profile.likesposts.map(post => post.likecomp);
+        const posts = await PostModel.find({ _id: { $in: postIds } });
+        res.json({ status: "Success", posts });
+    } catch (error) {
+        console.error("Error fetching upvoted posts:", error);
+        res.status(500).json({ error: "Error fetching upvoted posts" });
+    }
+});
+
+// Delete a post and its associated comments and upvotes
+app.delete("/post/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Fetch the post to ensure it exists
+        const post = await PostModel.findById(id);
+        if (!post) {
+            return res.status(404).json({ status: "Error", message: "Post not found" });
+        }
+
+        // Remove all comments for the post from each user's profile
+        await ProfileInfoModel.updateMany(
+            { "comments.postId": id },
+            { $pull: { comments: { postId: id } } }
+        );
+
+        // Remove the post from all users' likedposts
+        await ProfileInfoModel.updateMany(
+            { "likesposts.likecomp": id },
+            { $pull: { likesposts: { likecomp: id } } }
+        );
+
+        // Delete the post itself
+        await PostModel.findByIdAndDelete(id);
+
+        res.json({ status: "Success", message: "Post and associated data deleted successfully" });
+    } catch (error) {
+        console.error("Error deleting post:", error);
+        res.status(500).json({ error: "Error deleting post" });
+    }
+});
+
+// Delete a specific comment
+app.delete("/comment/:postId/:commentId", async (req, res) => {
+    const { postId, commentId } = req.params;
+    try {
+        // Remove the comment from the PostModel
+        const post = await PostModel.findByIdAndUpdate(
+            postId,
+            { $pull: { comments: { _id: commentId } } },
+            { new: true }
+        );
+
+        if (!post) {
+            return res.status(404).json({ status: "Error", message: "Post not found" });
+        }
+
+        // Remove the comment from the ProfileInfoModel (if applicable)
+        await ProfileInfoModel.updateMany(
+            { "comments._id": commentId },
+            { $pull: { comments: { _id: commentId } } }
+        );
+
+        res.json({ status: "Success", message: "Comment deleted successfully", post });
+    } catch (error) {
+        console.error("Error deleting comment:", error);
+        res.status(500).json({ error: "Error deleting comment" });
+    }
+});
 
 // ======================== PROFILE ROUTES ======================== //
 
@@ -844,6 +959,50 @@ app.get("/api/virtual-assets", async (req, res) => {
         res.status(500).json({ error: error.message }); // Send actual error message
     }
 });
+
+// ========================ISSUE TOKEN AND GAIN EQUITY =============//
+app.post("/api/virtualtokens", upload.single("image"), async (req, res) => {
+    try {
+      const { email, TokenName, NumberOfIssue, EquityDiluted } = req.body;
+      const imagePath = req.file ? `http://localhost:3001/uploads/${req.file.filename}` : null;
+  
+      // 1. Create the virtual token first
+      const newToken = new VirtualTokenModel({
+        email,
+        TokenName,
+        NumberOfIssue,
+        EquityDiluted,
+        image: imagePath,
+      });
+  
+      await newToken.save();
+  
+      // 2. Update or create the UserToken entry
+      await UserTokenModel.findOneAndUpdate(
+        { email },
+        { $push: { tokens: {
+          tokenname: TokenName,
+          tokenmail: email,
+          quantity: Number(NumberOfIssue),
+          avgprice: 0
+        }}},
+        { upsert: true }
+      );
+  
+      
+      res.status(201).json({ 
+        message: "Token added successfully!", 
+        token: newToken 
+      });
+    } catch (error) {
+      console.error("Error in /api/virtualtokens:", error);
+      res.status(500).json({ 
+        error: "Error adding token",
+        details: error.message 
+      });
+    }
+  });
+
 // ======================== SERVER START ======================== //
 
 app.listen(3001, () => {

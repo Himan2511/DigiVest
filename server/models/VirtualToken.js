@@ -3,8 +3,8 @@ const mongoose = require("mongoose");
 const VirtualTokenSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true }, // Unique key
   TokenName: { type: String, required: true },
-  CurrentPrice: { type: String},
-  NuberOfIssue: { type:Number, required: true },
+  CurrentPrice: { type: String , default:"NA"},
+  NumberOfIssue: { type:Number, required: true },
   EquityDiluted: { type:Number, required: true },
   image: { type: String }
 });

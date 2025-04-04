@@ -18,6 +18,7 @@ import CreatePost from "./CreatePost";
 import Update from "./Company/Update";
 import MyInvestment from "./MyInvestment";
 import VirtualAssets from "./VirtualAssets";
+import BuyToken from "./BuyToken"; // Import BuyToken Component
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -58,6 +59,7 @@ function App() {
         <Route path="/update-product/:email" element={<Update />} />
         <Route path="/MyInvestment/:email" element={isLoggedIn ? <MyInvestment/> : <Navigate to="/login" />} />
         <Route path="/VirtualAssets" element={isLoggedIn ? <VirtualAssets /> : <Navigate to="/login" />} />
+        <Route path="/buy-token/:email" element={<BuyToken />} /> {/* Route with email parameter */}
       </Routes>
       <Footer />
     </Router>
