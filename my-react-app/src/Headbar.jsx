@@ -57,8 +57,8 @@ function Headbar({ isLoggedIn, userName, setUserName, setIsLoggedIn, userData })
           </NavLink>
         </li>
         <li>
-          <NavLink to="/launch" className={({ isActive }) => (isActive ? "active-link" : "")}>
-            Launch
+          <NavLink to="/VirtualAssets" className={({ isActive }) => (isActive ? "active-link" : "")}>
+            Virtual Assets
           </NavLink>
         </li>
         <li>

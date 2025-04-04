@@ -13,7 +13,7 @@ const PostModel = require("./models/Post")
 const AdminModel = require("./models/admin");
 const ProductModel = require("./models/Product");  // Import Product.js model
 const UnverifiedUser = require("./models/Unverified");  // Adjust path if needed
-
+const VirtualTokenModel = require("./models/VirtualToken");
 
 const app = express();
 app.use(express.json());
@@ -819,6 +819,31 @@ app.post("/admin/reject-user/:email", async (req, res) => {
     }
 });
 
+// ======================== API to fetch user tokens by email ======================== //
+app.get("/api/user-tokens/:email", async (req, res) => {
+    try {
+        const { email } = req.params;
+        const userTokens = await UserTokenModel.findOne({ email });
+
+        if (!userTokens) {
+            return res.status(404).json({ message: "User tokens not found" });
+        }
+
+        res.json(userTokens.tokens); // Return only the tokens array
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+});
+
+app.get("/api/virtual-assets", async (req, res) => {
+    try {
+        const assets = await VirtualTokenModel.find();
+        res.json(assets);
+    } catch (error) {
+        console.error("Error fetching virtual assets:", error.message); // Log error message
+        res.status(500).json({ error: error.message }); // Send actual error message
+    }
+});
 // ======================== SERVER START ======================== //
 
 app.listen(3001, () => {

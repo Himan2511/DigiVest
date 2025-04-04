@@ -3,11 +3,12 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import styles from "./Profile.module.css";
 import myImage from "../assets/Investor.png";
+import { useNavigate } from "react-router-dom";
 
 function Profile() {
     const { email } = useParams(); // Get the email from the route parameter
     const [isEditing, setIsEditing] = useState(false);
-
+    const navigate = useNavigate(); // Initialize useNavigate
     const [profilePic, setProfilePic] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState("");
@@ -404,6 +405,11 @@ const handleRejected = async (userEmail) => {
         <div className={styles.profileContainer} >
             {/* Left Panel */}
             <div className={styles.leftPanel}>
+                <button
+            onClick={() => navigate(`/MyInvestment/${email}`)}
+            >
+            My Investment
+            </button>
             <h2>Profile Picture</h2>
 
             {profilePic ? (
