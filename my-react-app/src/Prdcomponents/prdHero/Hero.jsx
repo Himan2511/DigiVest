@@ -6,9 +6,10 @@ import imagem2 from "../../../assests/product_image2.jpeg";
 import imagem3 from "../../../assests/product_image3.jpeg";
 import { Link } from "react-router-dom"; // Ensure React Router is imported
 
-export const Hero = ({ product, email }) => {
-  const sliderImages = [imagem, imagem2, imagem3];
+export const Hero = ({ product=[], email }) => {
+  const sliderImages = product[0]?.images?.length > 0 ? product[0].images : [];
   
+  {console.log(email)}
   return (
     <div className={styles.all}>
       <section className={styles.container}>
