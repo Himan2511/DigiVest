@@ -42,4 +42,16 @@
   button:hover {
     background-color: #218838;
   }
+  .gainEquity {
+    padding: 10px 20px;
+    background-color: #4CAF50; /* Green color */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 10px;
+  }
   
+  .gainEquity:hover {
+    background-color: #45a049;
+  }

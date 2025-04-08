@@ -19,6 +19,7 @@ import Update from "./Company/Update";
 import MyInvestment from "./MyInvestment";
 import VirtualAssets from "./VirtualAssets";
 import BuyToken from "./BuyToken"; // Import BuyToken Component
+import GainEquity from "./GainEquity";
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -57,9 +58,11 @@ function App() {
         <Route path="/investors/tag/:tagName" element={<InvestorsByTag />} />
         <Route path="/products-by-tag/:tag" element={<ProductsByTag />} />
         <Route path="/update-product/:email" element={<Update />} />
-        <Route path="/MyInvestment/:email" element={isLoggedIn ? <MyInvestment/> : <Navigate to="/login" />} />
+        <Route path="/MyInvestment/:email" element={isLoggedIn ? <MyInvestment useremail={userData?.email} /> : <Navigate to="/login" />}/>
         <Route path="/VirtualAssets" element={isLoggedIn ? <VirtualAssets /> : <Navigate to="/login" />} />
         <Route path="/buy-token/:email" element={<BuyToken />} /> {/* Route with email parameter */}
+        
+        <Route path= "/gain-equity/:email" element = {isLoggedIn ? <GainEquity/> : <Navigate to = "/login"/>}/>
       </Routes>
       <Footer />
     </Router>

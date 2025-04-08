@@ -29,11 +29,11 @@ const BuyToken = () => {
     e.preventDefault();
     
     const data = new FormData();
-    data.append("email", email);
-    data.append("TokenName", formData.TokenName);
-    data.append("NumberOfIssue", formData.NumberOfIssue);
-    data.append("EquityDiluted", formData.EquityDiluted);
-    data.append("image", formData.image);
+  data.append("email", email);
+  data.append("TokenName", formData.TokenName);
+  data.append("NumberOfIssue", Number(formData.NumberOfIssue)); // Convert to number
+  data.append("EquityDiluted", Number(formData.EquityDiluted)); // Convert to number
+  data.append("image", formData.image);
 
     try {
       await axios.post("http://localhost:3001/api/virtualtokens", data);

@@ -11,7 +11,9 @@ export const Hero = ({ product = [], email, loggedInEmail }) => {
   const handleBuyToken = () => {
     navigate(`/buy-token/${email}`); // Navigate to BuyToken page with email as param
   };
-
+  const handleGainEquity = () => {
+    navigate(`/gain-equity/${email}`);
+  };
   return (
     <div className={styles.all}>
       <section className={styles.container}>
@@ -51,7 +53,9 @@ export const Hero = ({ product = [], email, loggedInEmail }) => {
           <button className={styles.buyTokens} onClick={handleBuyToken}>
             Buy Tokens
           </button>
-          <button className={styles.gainEquity}>Gain Equity</button>
+          <button className={styles.gainEquity} onClick={handleGainEquity}>
+            Gain Equity
+          </button>
         </div>
       )}
     </div>

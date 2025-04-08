@@ -959,50 +959,184 @@ app.get("/api/virtual-assets", async (req, res) => {
         res.status(500).json({ error: error.message }); // Send actual error message
     }
 });
+// Tokens with complete data for my investments page
+app.get("/api/my-investments/:email", async (req, res) => {
+    const { email } = req.params;
 
-// ========================ISSUE TOKEN AND GAIN EQUITY =============//
-app.post("/api/virtualtokens", upload.single("image"), async (req, res) => {
     try {
-      const { email, TokenName, NumberOfIssue, EquityDiluted } = req.body;
-      const imagePath = req.file ? `http://localhost:3001/uploads/${req.file.filename}` : null;
-  
-      // 1. Create the virtual token first
-      const newToken = new VirtualTokenModel({
+        // Fetch the user's tokens
+        const userTokens = await UserTokenModel.findOne({ email });
+
+        if (!userTokens) {
+            return res.status(404).json({ status: "Error", message: "User tokens not found" });
+        }
+
+        // Fetch the current price and other details for each token
+        const tokensWithDetails = await Promise.all(
+            userTokens.tokens.map(async (token) => {
+                const virtualToken = await VirtualTokenModel.findOne({ email: token.tokenmail });
+
+                if (virtualToken) {
+                    return {
+                        tokename: token.tokename,
+                        tokenmail: token.tokenmail,
+                        quantity: token.quantity,
+                        avgprice: token.avgprice,
+                        currentPrice: virtualToken.CurrentPrice,
+                        image: virtualToken.image,
+                    };
+                }
+
+                return null; // Skip if no matching virtual token is found
+            })
+        );
+
+        // Filter out null values (tokens without matching virtual tokens)
+        const filteredTokens = tokensWithDetails.filter((token) => token !== null);
+
+        res.json({ status: "Success", tokens: filteredTokens });
+    } catch (error) {
+        console.error("Error fetching user investments:", error.message);
+        res.status(500).json({ status: "Error", message: "Server error" });
+    }
+});
+// ========================ISSUE TOKEN AND GAIN EQUITY =============//
+
+
+app.post("/api/virtualtokens", upload.single("image"), async (req, res) => {
+  try {
+    const { email, TokenName, NumberOfIssue, EquityDiluted } = req.body;
+
+    const parsedNumberOfIssue = parseFloat(NumberOfIssue);
+    const parsedEquityDiluted = parseFloat(EquityDiluted);
+
+    if (isNaN(parsedNumberOfIssue)) {
+      return res.status(400).json({ error: "NumberOfIssue must be a valid number" });
+    }
+    if (isNaN(parsedEquityDiluted)) {
+      return res.status(400).json({ error: "EquityDiluted must be a valid number" });
+    }
+
+    // Save to VirtualTokenModel
+    const newToken = new VirtualTokenModel({
+      email,
+      TokenName,
+      NumberOfIssue: parsedNumberOfIssue,
+      EquityDiluted: parsedEquityDiluted,
+      image: req.file ? `http://localhost:3001/uploads/${req.file.filename}` : null,
+    });
+
+    await newToken.save();
+
+    // Save or update in UserTokenModel
+    const tokenEntry = {
+      tokenname: TokenName,
+      tokenmail: email,
+      quantity: parsedNumberOfIssue,
+      avgprice: 0, // Set default avgprice to 0; or compute if needed
+    };
+
+    const existingUser = await UserTokenModel.findOne({ email });
+
+    if (existingUser) {
+      // Check if token already exists in user's token list
+      const tokenIndex = existingUser.tokens.findIndex(
+        (token) => token.tokenname === TokenName && token.tokenmail === email
+      );
+
+      if (tokenIndex > -1) {
+        // If token exists, update quantity and optionally avgprice
+        existingUser.tokens[tokenIndex].quantity += parsedNumberOfIssue;
+      } else {
+        // If token does not exist, push new token entry
+        existingUser.tokens.push(tokenEntry);
+      }
+
+      await existingUser.save();
+    } else {
+      // Create a new user with this token
+      const newUserToken = new UserTokenModel({
         email,
-        TokenName,
-        NumberOfIssue,
-        EquityDiluted,
-        image: imagePath,
+        tokens: [tokenEntry],
       });
+      await newUserToken.save();
+    }
+
+    res.status(201).json({ message: "Token added successfully!", token: newToken });
+  } catch (error) {
+    console.error("Full error:", error);
+    res.status(500).json({
+      error: "Error adding token",
+      details: error.message,
+    });
+  }
+});
+
+  // Combined update and delete endpoint
+// Updated combined update endpoint
+app.post('/api/virtualtokens/update', async (req, res) => {
+    try {
+      const { email, TokenName, NumberOfIssue, EquityDiluted, coinsPurchased } = req.body;
   
-      await newToken.save();
+      const numCoinsPurchased = parseFloat(coinsPurchased);
+      const numEquityDiluted = parseFloat(EquityDiluted);
+      const numNumberOfIssue = parseFloat(NumberOfIssue);
   
-      // 2. Update or create the UserToken entry
-      await UserTokenModel.findOneAndUpdate(
+      if (numNumberOfIssue <= 0) {
+        await VirtualTokenModel.findOneAndDelete({ email });
+  
+        await UserTokenModel.updateMany(
+          { 'tokens.tokenname': TokenName },
+          { $pull: { tokens: { tokenname: TokenName } } }
+        );
+  
+        return res.json({ deleted: true });
+      }
+  
+      const updatedToken = await VirtualTokenModel.findOneAndUpdate(
         { email },
-        { $push: { tokens: {
-          tokenname: TokenName,
-          tokenmail: email,
-          quantity: Number(NumberOfIssue),
-          avgprice: 0
-        }}},
-        { upsert: true }
+        {
+          TokenName,
+          NumberOfIssue: numNumberOfIssue,
+          EquityDiluted: numEquityDiluted
+        },
+        { new: true }
       );
   
-      
-      res.status(201).json({ 
-        message: "Token added successfully!", 
-        token: newToken 
+      const updatedUser = await UserTokenModel.findOneAndUpdate(
+        { email, 'tokens.tokenname': TokenName },
+        { $inc: { 'tokens.$.quantity': numCoinsPurchased } }
+      );
+  
+      if (!updatedToken || !updatedUser) {
+        return res.status(404).json({ error: 'Token or user not found' });
+      }
+  
+      res.json({
+        success: true,
+        deleted: false,
+        token: updatedToken
       });
-    } catch (error) {
-      console.error("Error in /api/virtualtokens:", error);
-      res.status(500).json({ 
-        error: "Error adding token",
-        details: error.message 
+    } catch (err) {
+      console.error("Update error:", err);
+      res.status(500).json({
+        error: "Failed to update token",
+        details: err.message
       });
     }
   });
-
+  
+  app.get('/api/virtualtokens/:email', async (req, res) => {
+    try {
+      const token = await VirtualTokenModel.findOne({ email: req.params.email });
+      if (!token) {
+        return res.status(404).json({ error: 'Token not found' });
+      }
+      res.json(token);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 // ======================== SERVER START ======================== //
 
 app.listen(3001, () => {

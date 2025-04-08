@@ -65,7 +65,7 @@ const GainEquity = () => {
         image: tokenData.image
       };
 
-      const response = await axios.put(`http://localhost:3001/api/virtualtokens/update`, {
+      const response = await axios.post(`http://localhost:3001/api/virtualtokens/update`, {
         ...updatePayload,
         coinsPurchased: coinsNum
       });
@@ -75,7 +75,7 @@ const GainEquity = () => {
       } else {
         alert('Equity successfully updated!');
       }
-      navigate('/my-investments');
+      navigate(`/company/${email}`);
     } catch (err) {
       setError('Failed to update equity: ' + (err.response?.data?.error || err.message));
       console.error('Error updating equity:', err);
